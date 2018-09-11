@@ -8,15 +8,15 @@ import (
 	"strings"
 )
 
-func check(e error){
-	if e != nil{
+func check(e error) {
+	if e != nil {
 		panic(e)
 	}
 }
 
 // Read returns the data read from a file while ensuring that the file being read is first passed through check.
 // This allows us to reduce some code duplication and panic if the file is not found or there is some io error.
-func Read(proArgs []string) []byte{
+func Read(proArgs []string) []byte {
 	data, err := ioutil.ReadFile(proArgs[0])
 	check(err)
 
@@ -35,17 +35,23 @@ func extractNginxFields(log []string) []map[string]string {
 		ipAddr := ipPattern.FindString(log[e])
 		date := strings.TrimRight(datePattern.FindString(log[e]), "+")
 
-		fmt.Printf("%v\t%v\n", date, ipAddr)
+		fields[e] = make(map[string]string)
+		fields[e]["ipAddr"] = ipAddr
+		fields[e]["date"] = date
 	}
 
 	return fields
 }
 
-func main(){
+func main() {
 	fmt.Println("Welcome to Awesome Monitor.")
 	proArgs := os.Args[1:]
 
 	data := string(Read(proArgs))
 	lines := strings.Split(data, "\n") // We want to break the logs up by newlines
-	extractNginxFields(lines)
+	fields := extractNginxFields(lines)
+
+	for e := range fields {
+		fmt.Printf("%v\t%v\n", fields[e]["date"], fields[e]["ipAddr"])
+	}
 }
