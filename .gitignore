@@ -2,3 +2,4 @@
 .idea/
 example.log
 go_build_awesome_go
+*.exe
