@@ -6,11 +6,14 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
+
+const NginxDate = "02/Jan/2006:15:04:05"
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		panic(e) // TODO: Gracefully handle error
 	}
 }
 
@@ -29,15 +32,19 @@ func extractNginxFields(log []string) []map[string]string {
 
 	ipPattern := regexp.MustCompile("([0-9]\\.?)+")
 	datePattern := regexp.MustCompile("[0-9]+\\/[A-Z][a-z]+\\/\\d+:\\d+:\\d+:\\d+ \\+")
+	filePattern := regexp.MustCompile(" \\/.* HTTP")
 
 	for e := range log {
 		// Do some stuff to grab the columns from the nginx log.
 		ipAddr := ipPattern.FindString(log[e])
-		date := strings.TrimRight(datePattern.FindString(log[e]), "+")
+		date := strings.TrimRight(datePattern.FindString(log[e]), " +")
+		file := filePattern.FindString(log[e])
+		file = file[:len(file)-5] // Remove the " HTTP" at the end of the string because I'm bad at RegEx. TODO: FIX
 
 		fields[e] = make(map[string]string)
 		fields[e]["ipAddr"] = ipAddr
 		fields[e]["date"] = date
+		fields[e]["file"] = file
 	}
 
 	return fields
@@ -52,6 +59,13 @@ func main() {
 	fields := extractNginxFields(lines)
 
 	for e := range fields {
-		fmt.Printf("%v\t%v\n", fields[e]["date"], fields[e]["ipAddr"])
+
+		ti, err := time.Parse(NginxDate, fields[e]["date"])
+		if err == nil {
+			fmt.Printf("%v\t%v\t%v\n", ti, fields[e]["ipAddr"], fields[e]["file"])
+		} else {
+			fmt.Printf("Awful error: %v", err)
+		}
 	}
+
 }
