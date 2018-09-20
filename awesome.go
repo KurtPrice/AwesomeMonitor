@@ -53,18 +53,22 @@ func extractNginxFields(log []string) []map[string]string {
 func main() {
 	fmt.Println("Welcome to Awesome Monitor.")
 	proArgs := os.Args[1:]
+	testDateTime := time.Since(time.Now())
 
 	data := string(Read(proArgs))
-	lines := strings.Split(data, "\n") // We want to break the logs up by newlines
+	// We want to break the logs up by newlines
+	lines := strings.Split(data, "\n")
 	fields := extractNginxFields(lines)
 
 	for e := range fields {
-
+		// retrieve the dates from the log files.
 		ti, err := time.Parse(NginxDate, fields[e]["date"])
-		if err == nil {
+		diff := time.Since(ti).Minutes() - testDateTime.Minutes()
+
+		if err == nil && diff < 10 {
 			fmt.Printf("%v\t%v\t%v\n", ti, fields[e]["ipAddr"], fields[e]["file"])
-		} else {
-			fmt.Printf("Awful error: %v", err)
+		} else if err != nil {
+			fmt.Printf("Awful error: %v\n", err)
 		}
 	}
 
