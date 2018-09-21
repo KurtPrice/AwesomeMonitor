@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,8 +20,8 @@ func check(e error) {
 
 // Read returns the data read from a file while ensuring that the file being read is first passed through check.
 // This allows us to reduce some code duplication and panic if the file is not found or there is some io error.
-func Read(proArgs []string) []byte {
-	data, err := ioutil.ReadFile(proArgs[0])
+func Read(proArgs string) []byte {
+	data, err := ioutil.ReadFile(proArgs)
 	check(err)
 
 	return data
@@ -50,26 +51,31 @@ func extractNginxFields(log []string) []map[string]string {
 	return fields
 }
 
-func main() {
-	fmt.Println("Welcome to Awesome Monitor.")
-	proArgs := os.Args[1:]
-	testDateTime := time.Since(time.Now())
-
-	data := string(Read(proArgs))
-	// We want to break the logs up by newlines
-	lines := strings.Split(data, "\n")
-	fields := extractNginxFields(lines)
-
+func retrieve(fields []map[string]string, window int){
 	for e := range fields {
 		// retrieve the dates from the log files.
 		ti, err := time.Parse(NginxDate, fields[e]["date"])
-		diff := time.Since(ti).Minutes() - testDateTime.Minutes()
-
-		if err == nil && diff < 10 {
+		elapsed := int(time.Since(ti).Minutes())
+		if err == nil && elapsed <= window {
 			fmt.Printf("%v\t%v\t%v\n", ti, fields[e]["ipAddr"], fields[e]["file"])
 		} else if err != nil {
 			fmt.Printf("Awful error: %v\n", err)
 		}
 	}
+}
 
+func main() {
+	fmt.Println("Welcome to Awesome Monitor.")
+	proArgs := os.Args[1]
+	data := string(Read(proArgs))
+	window, err := strconv.Atoi(os.Args[2])
+
+	if err != nil{
+		os.Exit(-1) // TODO: Clean this up with the panic in Read
+	}
+
+	// We want to break the logs up by newlines
+	lines := strings.Split(data, "\n")
+	fields := extractNginxFields(lines)
+	retrieve(fields, window)
 }
