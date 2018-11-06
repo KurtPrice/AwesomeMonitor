@@ -32,20 +32,23 @@ func extractNginxFields(log []string) []map[string]string {
 	fields := make([]map[string]string, len(log))
 
 	ipPattern := regexp.MustCompile("([0-9]\\.?)+")
-	datePattern := regexp.MustCompile("[0-9]+\\/[A-Z][a-z]+\\/\\d+:\\d+:\\d+:\\d+ \\+")
-	filePattern := regexp.MustCompile(" \\/.* HTTP")
+	datePattern := regexp.MustCompile("[0-9]+\\/[A-Z].*[0-9]+.?[0-9]+\\]")
+	filePattern := regexp.MustCompile("(GET|POST) (\\/?[A-Z]*[a-z]*[0-9]*\\.*)*")
 
-	for e := range log {
+	for index := range log {
 		// Do some stuff to grab the columns from the nginx log.
-		ipAddr := ipPattern.FindString(log[e])
-		date := strings.TrimRight(datePattern.FindString(log[e]), " +")
-		file := filePattern.FindString(log[e])
-		file = file[:len(file)-5] // Remove the " HTTP" at the end of the string because I'm bad at RegEx. TODO: FIX
+		line := log[index]
 
-		fields[e] = make(map[string]string)
-		fields[e]["ipAddr"] = ipAddr
-		fields[e]["date"] = date
-		fields[e]["file"] = file
+		ipAddr := ipPattern.FindString(line)
+		date := datePattern.FindString(line)
+		date = strings.SplitAfter(date, " ")[0] // TODO: Fix the regex so this isn't needed.
+		date = date[:len(date)-1]
+		file := filePattern.FindString(line)
+
+		fields[index] = make(map[string]string)
+		fields[index]["ipAddr"] = ipAddr
+		fields[index]["date"] = date
+		fields[index]["file"] = file
 	}
 
 	return fields
